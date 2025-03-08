@@ -1,4 +1,4 @@
-# Unlocking Dust UTXOs as Transaction Fees
+# Unlocking Dust UTXOs as Miner Transaction Fees
 
 ## Abstract
 
