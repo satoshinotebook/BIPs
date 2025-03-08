@@ -277,9 +277,7 @@ This proposal is designed as a soft fork to maintain backward compatibility whil
 
 2. **Consensus Changes**: The consensus rule change allowing miners to claim these UTXOs in coinbase transactions can be implemented in a way that doesn't violate existing validation rules for non-upgraded nodes. This requires careful design but is achievable within the soft fork framework.
 
-3. **Implementation Complexity**: While a hard fork would allow for a more elegant solution, the soft fork approach minimizes disruption to the network while still achieving the core functionality required.
-
-4. **Precedent**: Previous Bitcoin upgrades like SegWit have successfully used soft fork mechanisms to introduce significant new functionality without requiring all nodes to upgrade simultaneously.
+3. **Precedent**: Previous Bitcoin upgrades like SegWit have successfully used soft fork mechanisms to introduce significant new functionality without requiring all nodes to upgrade simultaneously.
 
 ### Comparison with Existing Dust Solutions
 
@@ -290,6 +288,17 @@ This proposal is designed as a soft fork to maintain backward compatibility whil
 3. **CoinJoin and Privacy Techniques**: These can incidentally help with dust if users include small inputs, but the minimum amounts required often exclude dust. Our proposal doesn't focus on privacy but provides a clear path for dust elimination without needing counterparties or equal amounts.
 
 4. **Lightning Network**: Lightning helps avoid creating new dust (commitment transactions don't create outputs below the dust limit), but doesn't eliminate existing on-chain dust UTXOs. In fact, users with only dust UTXOs can't easily open Lightning channels. Our proposal can complement Lightning by helping clean up existing dust.
+
+### Protocol Precedent
+
+There is precedent for this type of mechanism in Bitcoin's existing ecosystem:
+
+1. Lightning's commitment transactions already implement a form of dust-to-fee conversion by omitting outputs below the dust threshold and effectively giving that value to miners.
+
+2. Some wallets informally implement dust consolidation by adding extra dust UTXOs to transactions and allowing their value to go to fees.
+
+This proposal standardizes and formalizes this concept at the protocol level, while providing better security and clearer incentives.d in a way that doesn't violate existing validation rules for non-upgraded nodes.
+
 
 ### Network Impact Analysis
 
@@ -301,43 +310,7 @@ The impact of this proposal on the Bitcoin network has been carefully considered
 
 3. **Block Validation**: The additional validation required for dust fee claims is minimal and should not significantly impact block validation times.
 
-### Protocol Precedent
-
-There is precedent for this type of mechanism in Bitcoin's existing ecosystem:
-
-1. **Lightning's commitment transactions** already implement a form of dust-to-fee conversion by omitting outputs below the dust threshold and effectively giving that value to miners.
-
-2. **Some wallets informally implement** dust consolidation by adding extra dust UTXOs to transactions and allowing their value to go to fees.
-
-This proposal standardizes and formalizes this concept at the protocol level, while providing better security and clearer incentives.d in a way that doesn't violate existing validation rules for non-upgraded nodes.
-
-3. A hard fork would allow for a more elegant solution but would be significantly more disruptive to the network.
-
-### Comparison with Existing Dust Solutions
-
-Multiple existing approaches to the dust problem were evaluated:
-
-1. **UTXO Consolidation (Self-Batching)**: Users can proactively merge their small UTXOs during periods of low fees. This requires paying fees upfront and can reduce privacy by combining inputs. Our proposal differs in that users don't need to pay any fee - they simply surrender the dust UTXOs that are already economically unviable. Additionally, consolidation results in one UTXO remaining, whereas our approach removes UTXOs entirely.
-
-2. **Payment Batching**: Batching reduces fee overhead but primarily helps prevent creating new dust rather than cleaning up existing dust. Our proposal complements batching by addressing already-existing dust UTXOs.
-
-3. **CoinJoin and Privacy Techniques**: These can incidentally help with dust if users include small inputs, but the minimum amounts required often exclude dust. Our proposal doesn't focus on privacy but provides a clear path for dust elimination without needing counterparties or equal amounts.
-
-4. **Lightning Network**: Lightning helps avoid creating new dust (commitment transactions don't create outputs below the dust limit), but doesn't eliminate existing on-chain dust UTXOs. In fact, users with only dust UTXOs can't easily open Lightning channels. Our proposal can complement Lightning by helping clean up existing dust.
-
-### Protocol Precedent
-
-There is precedent for this type of mechanism in Bitcoin's existing ecosystem:
-
-1. **Lightning's commitment transactions** already implement a form of dust-to-fee conversion by omitting outputs below the dust threshold and effectively giving that value to miners.
-
-2. **Some wallets informally implement** dust consolidation by adding extra dust UTXOs to transactions and allowing their value to go to fees.
-
-This proposal standardizes and formalizes this concept at the protocol level, while providing better security and clearer incentives.
-
-### Economic Considerations
-
-This proposal creates positive economic incentives:
+### Positive Economic Considerations
 
 1. **Users benefit** by reclaiming economic value from otherwise stranded dust
 2. **Miners receive additional fee income**, which becomes increasingly important as block rewards decrease through halvings
@@ -414,53 +387,53 @@ The following test cases should be implemented to verify the correct behavior of
 
 The following test vectors should be used to verify implementations (in pseudo-code notation):
 
-
+```
 Example 1: Simple Dust Fee Designation
 tx_input[0]: txid: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa vout: 0 signature: <valid_signature> pubkey: <valid_pubkey>
 tx_output[0]: value: 0 scriptPubKey: OP_RETURN DUSTFEE bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 0 <valid_signature>
+```
 Referenced dust UTXO:
+
+```
 dust_utxo: txid: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb vout: 0 value: 600 sats scriptPubKey: P2WPKH(<pubkey_hash>)
+```
+
 Resulting coinbase transaction:
+
+```
 coinbase_tx: inputs: - (standard coinbase input) - txid: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, vout: 0 outputs: - value: block_subsidy + tx_fees + 600 sats, scriptPubKey: (miner's address)
+```
 
 # Example 2: Batch Dust Fee Designation
 
+```
 Transaction designating multiple dust UTXOs simultaneously
 tx_input[0]: txid: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc vout: 0 signature: <valid_signature> pubkey: <valid_pubkey>
 tx_output[0]: value: 0 scriptPubKey: OP_RETURN DUSTFEE dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd 0 <valid_signature_1>
 tx_output[1]: value: 0 scriptPubKey: OP_RETURN DUSTFEE eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee 1 <valid_signature_2>
 tx_output[2]: value: 0 scriptPubKey: OP_RETURN DUSTFEE ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff 0 <valid_signature_3>
+```
+
 Referenced dust UTXOs:
+
+```
 dust_utxo_1: txid: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd vout: 0 value: 450 sats scriptPubKey: P2WPKH(<pubkey_hash_1>)
 dust_utxo_2: txid: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vout: 1 value: 380 sats scriptPubKey: P2WPKH(<pubkey_hash_2>)
 dust_utxo_3: txid: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff vout: 0 value: 520 sats scriptPubKey: P2WPKH(<pubkey_hash_3>)
+```
+
 Resulting coinbase transaction:
+
+```
 coinbase_tx: inputs: - (standard coinbase input) - txid: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd, vout: 0 - txid: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee, vout: 1 - txid: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, vout: 0 outputs: - value: block_subsidy + tx_fees + 1350 sats, scriptPubKey: (miner's address)
+```
 
 This batch example demonstrates how wallets can efficiently designate multiple dust UTXOs in a single transaction, improving efficiency and reducing overhead. The user designates three separate dust UTXOs totaling 1,350 sats, which the miner can claim in a single coinbase transaction.
 
 Implementations should verify that nodes correctly validate these transactions and that miners can successfully claim the dust UTXOs in their coinbase transactions.
 
-## Conclusion
-
-This BIP proposes a solution to the long-standing problem of economically unviable dust UTXOs by allowing them to be repurposed as transaction fees. By introducing a secure mechanism for users to designate dust UTXOs as fees without exposing private keys, this proposal provides benefits to users, miners, and the Bitcoin network as a whole.
-
-The approach is designed as a soft fork, ensuring backward compatibility while adding new functionality. It builds on precedent from existing Bitcoin features and complements other dust mitigation strategies like payment batching and Lightning Network.
-
-As Bitcoin continues to mature and block rewards diminish, solutions like this that align economic incentives with network health will become increasingly important. By providing a path for dust UTXOs to reenter economic circulation as mining rewards, this proposal contributes to Bitcoin's long-term sustainability.
 
 
-## Reference Implementation
-
-The reference implementation will include changes to the following components:
-
-1. **Consensus Rules**: Modifications to allow miners to claim designated dust UTXOs
-2. **Transaction Validation**: Logic to validate dust fee designation outputs
-3. **Mempool Policy**: Updates to relay and acceptance policies for dust fee transactions
-4. **Wallet Logic**: Functions to identify dust UTXOs and create designation transactions
-5. **Mining Software**: Updates to claim designated dust UTXOs in coinbase transactions
-
-The implementation will be thoroughly tested on regtest and testnet environments before being proposed for mainnet activation.
 
 ## Deployment
 
@@ -502,6 +475,14 @@ Several challenges may arise during deployment:
 2. **Miner Adoption Variance**: Some miners might adopt this feature while others don't, leading to inconsistent confirmation times for dust fee transactions. This is a temporary issue that will resolve as more miners adopt the feature.
 
 3. **User Education**: Users need to understand that designating a dust UTXO as a fee means surrendering control of those funds. Clear wallet UX is critical to prevent user confusion.
+
+## Conclusion
+
+This BIP proposes a solution to the long-standing problem of economically unviable dust UTXOs by allowing them to be repurposed as transaction fees. By introducing a secure mechanism for users to designate dust UTXOs as fees without exposing private keys, this proposal provides benefits to users, miners, and the Bitcoin network as a whole.
+
+The approach is designed as a soft fork, ensuring backward compatibility while adding new functionality. It builds on precedent from existing Bitcoin features and complements other dust mitigation strategies like payment batching and Lightning Network.
+
+As Bitcoin continues to mature and block rewards diminish, solutions like this that align economic incentives with network health will become increasingly important. By providing a path for dust UTXOs to reenter economic circulation as mining rewards, this proposal contributes to Bitcoin's long-term sustainability.
 
 ## Future Enhancements
 
