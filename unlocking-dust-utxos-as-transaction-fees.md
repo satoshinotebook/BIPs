@@ -12,6 +12,10 @@ It is crucial to emphasize that this mechanism is entirely opt-in and user-initi
 
 This BIP is licensed under the BSD 2-Clause License.
 
+## Background
+
+Bitcoin “dust” refers to tiny UTXOs (Unspent Transaction Outputs) whose value is so low that they’re effectively unspendable – the fee to spend them exceeds their value​. These dusty coins accumulate over time (e.g. leftover change from transactions or dust attacks) and form part of the UTXO set, yet are “stuck” because owners have no economic incentive to spend them​. This growing dust horizon – the expanding set of outputs that cost more to move than they’re worth – presents a sustainability issue​. The proposal at hand is to use dust UTXOs as fees by transferring their ownership to miners instead of paying normal satoshi fees. We analyze the technical feasibility and implications of this idea in this proposal.
+
 ## Motivation
 
 Bitcoin's UTXO model, while powerful, has created an unintended consequence in the form of economically unviable "dust" UTXOs. These are outputs with such small values that the transaction fee required to spend them would exceed their worth. This presents several problems for the Bitcoin network:
@@ -27,6 +31,9 @@ Bitcoin's UTXO model, while powerful, has created an unintended consequence in t
 5. **Growing Problem**: As Bitcoin's value increases and transaction fees rise over time, the threshold for what constitutes "dust" also rises, potentially stranding larger amounts of Bitcoin. This proposal proactively addresses a problem that will likely become more significant in the future.
 
 Currently, there is no standard mechanism for users to reclaim value from dust UTXOs when the economics don't justify a traditional transaction. This BIP addresses this gap by allowing dust UTXOs to be repurposed as transaction fees through a secure mechanism that doesn't require exposing private keys.
+
+It is essential to emphasize that this proposal is **entirely voluntary and opt-in**. Users must explicitly authorize the designation of any dust UTXO through cryptographic signatures. This is not a forced reclamation or confiscation mechanism - it simply provides users with a way to extract value from otherwise stranded coins if they choose to do so. Users always retain complete control over their dust UTXOs until they explicitly designate them as fees.
+
 
 ## Specification
 
@@ -61,7 +68,7 @@ The implementation of this proposal requires changes at several layers of the Bi
 A dust UTXO is designated as a fee offering through a new output script pattern:
 
 
-OP_RETURN <DUST_FEE_PREFIX> <dust_utxo_txid> <dust_utxo_vout> <signature>
+```OP_RETURN <DUST_FEE_PREFIX> <dust_utxo_txid> <dust_utxo_vout> <signature>```
 
 Where:
 - `DUST_FEE_PREFIX` is a standardized identifier for dust fee offerings (e.g., "DUSTFEE")
